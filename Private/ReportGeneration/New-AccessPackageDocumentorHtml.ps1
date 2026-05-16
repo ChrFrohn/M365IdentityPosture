@@ -179,6 +179,7 @@ function New-AccessPackageDocumentorHtml {
 	.detail-chip .value { font-family: 'Cascadia Code', 'SFMono-Regular', ui-monospace, monospace; font-size: 12px; color: var(--muted); white-space: pre-wrap; }
 	.detail-chip .badge { background: rgba(16,185,129,0.12); color: #10b981; }
 	.detail-chip .badge.bad { background: rgba(239,68,68,0.12); color: #ef4444; }
+	.detail-chip .badge.warn { background: rgba(245,158,11,0.12); color: #f59e0b; }
 	.code-block { background: #0f172a10; padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
 	#detail-body { margin-top: 8px; }
 	.dimmed { opacity: 0.2 !important; }
@@ -1070,14 +1071,29 @@ function New-AccessPackageDocumentorHtml {
 			if (p.assignmentRequirements) add('Assignment requirements', prettyValue(p.assignmentRequirements));
 		}
 		else if (type === 'resource') {
+				var isAzureRbac = (p.originSystem || '').toLowerCase().indexOf('azure') !== -1 || (p.typeLabel || '').toLowerCase() === 'azure rbac';
 				add('Resource type', htmlEscape(p.typeLabel || p.type || '—'));
+				if (isAzureRbac && p.roleType) {
+					var rTypeLower = p.roleType.toLowerCase();
+					var roleTypeBadge = rTypeLower === 'eligible'
+						? '<span class="badge warn">Eligible (PIM)</span>'
+						: rTypeLower === 'active'
+							? '<span class="badge">Active</span>'
+							: htmlEscape(p.roleType);
+					add('Role type', roleTypeBadge);
+				}
 				add('Origin system', htmlEscape(p.originSystem || '—'));
 				add('Origin ID', htmlEscape(p.originId || '—'));
 				add('Resource ID', htmlEscape(p.resourceId || '—'));
 				add('Role', htmlEscape(p.roleDisplay || '—'));
 				add('Role ID', htmlEscape(p.roleId || '—'));
-				add('Assignment type', htmlEscape(p.assignmentType || '—'));
-				add('Scope', htmlEscape(p.scope || '—'));
+				if (isAzureRbac) {
+					add('Azure scope path', htmlEscape(p.assignmentType || '—'));
+					add('Scope name', htmlEscape(p.scope || '—'));
+				} else {
+					add('Assignment type', htmlEscape(p.assignmentType || '—'));
+					add('Scope', htmlEscape(p.scope || '—'));
+				}
 			}
 			else if (type === 'orphaned-resource') {
 				add('Resource type', htmlEscape(p.typeLabel || p.type || '—'));
@@ -1203,12 +1219,14 @@ function New-AccessPackageDocumentorHtml {
 			"approval-stage": 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23f59e0b"><path d="M4 12.5 9.5 18 20 6.5" stroke="%23ffffff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 			"custom-extension": 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ec4899"><path d="M13.5 3.5 6 13h5l-1.5 7.5L18 11h-5l.5-7.5Z" stroke="%23ffffff" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>',
 			"orphaned-group": 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23f59e0b"><path d="M12 2L2 7v10c0 5.5 4.5 7 10 7s10-1.5 10-7V7L12 2Z" stroke="%23ffffff" stroke-width="1.2" fill="none"/><path d="M12 9v3M12 15h.01" stroke="%23ffffff" stroke-width="1.5" stroke-linecap="round"/></svg>',
-			"orphaned-resource": 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23fbbf24"><path d="M12 2L2 7v10c0 5.5 4.5 7 10 7s10-1.5 10-7V7L12 2Z" stroke="%23ffffff" stroke-width="1.2" fill="none"/><circle cx="12" cy="10" r="2" fill="%23ffffff"/></svg>'
+			"orphaned-resource": 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23fbbf24"><path d="M12 2L2 7v10c0 5.5 4.5 7 10 7s10-1.5 10-7V7L12 2Z" stroke="%23ffffff" stroke-width="1.2" fill="none"/><circle cx="12" cy="10" r="2" fill="%23ffffff"/></svg>',
+			resourceAzure: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.5 4 6 13.5h5.5L9 20l9-9.5H12.5L16 4Z" fill="%230078d4" stroke="%23ffffff" stroke-width="0.8" stroke-linejoin="round"/></svg>'
 		};
 
 		function iconForResource(system, typeLabel) {
 			var s = (system || '').toLowerCase();
 			var t = (typeLabel || '').toLowerCase();
+			if (s.includes('azure') || t.includes('azure rbac')) return iconByType.resourceAzure;
 			if (s.includes('group') || t.includes('group') || t.includes('team')) return iconByType.resourceGroup;
 			if (s.includes('application') || s.includes('app') || t.includes('app')) return iconByType.resourceApp;
 			if (s.includes('sharepoint') || s.includes('spo') || t.includes('sharepoint') || t.includes('site')) return iconByType.resourceSite;
@@ -1228,7 +1246,9 @@ function New-AccessPackageDocumentorHtml {
 				icon = iconForResource(payload.originSystem, typeLabel);
 				// Set color based on typeLabel
 				var tl = typeLabel.toLowerCase();
-				if (tl.includes('group') || tl.includes('team')) {
+				if (tl.includes('azure rbac')) {
+					bgColor = '#0078d4';
+				} else if (tl.includes('group') || tl.includes('team')) {
 					bgColor = '#10b981';
 				} else if (tl.includes('app')) {
 					bgColor = '#3b82f6';

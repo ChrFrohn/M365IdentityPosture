@@ -127,6 +127,7 @@ function Convert-AccessPackageDocumentorData {
 						resourceId     = $resource.id
 						roleDisplay    = $roleDisplay
 						roleId         = $role.id
+						roleType       = if ($role.roleType) { $role.roleType } elseif ($role.memberType) { $role.memberType } else { $null }
 						assignmentType = $scope.originId
 						scope          = $scope.displayName
 						scopeId        = $scope.id

@@ -25,6 +25,7 @@ function Get-AccessPackageResourceTypeLabel {
     if ($origin -like '*aadapplication*' -or $origin -like '*serviceprincipal*') { return 'App' }
     if ($origin -like '*aadrole*' -or $origin -like '*directoryrole*' -or $type -like '*role*') { return 'Entra role' }
     if ($origin -like '*sharepoint*' -or $origin -like '*spo*' -or $type -like '*sharepoint*') { return 'SharePoint Site' }
+    if ($origin -like '*azurerole*' -or $origin -like '*azureresource*' -or $origin -like '*azuresubscription*' -or $origin -like '*azuremanagementgroup*') { return 'Azure RBAC' }
 
     return 'Custom Data'
 }
